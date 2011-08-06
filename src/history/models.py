@@ -6,6 +6,9 @@ from django.db import models
 from history import manager
 
 class HistoricalRecords(object):
+    def __init__(self, preserve_fk=True):
+        self._preserve_fk = preserve_fk
+
     def contribute_to_class(self, cls, name):
         self.manager_name = name
         models.signals.class_prepared.connect(self.finalize, sender=cls)
@@ -44,11 +47,17 @@ class HistoricalRecords(object):
 
         for field in model._meta.fields:
             field = copy.copy(field)
+            if isinstance(field, models.ForeignKey) and not self._preserve_fk:
+                # Maybe no need to preserve FK on historical models.
+                field_name = '%s_id' % field.name
+                field = copy.copy(field.rel.to._meta.pk)
+                field.name = field_name
+
             if isinstance(field, models.AutoField):
                 # The historical model gets its own AutoField, so any
                 # existing one must be replaced with an IntegerField.
                 field.__class__ = models.IntegerField
-            
+
             if field.primary_key or field.unique:
                 # Unique fields can no longer be guaranteed unique,
                 # but they should still be indexed for faster lookups.
@@ -56,7 +65,6 @@ class HistoricalRecords(object):
                 field._unique = False
                 field.db_index = True
             fields[field.name] = field
-
         return fields
 
     def get_extra_fields(self, model):
