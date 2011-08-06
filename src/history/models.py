@@ -7,7 +7,13 @@ from history import manager
 
 
 class HistoricalRecords(object):
-    def __init__(self, preserve_fk=True):
+    def __init__(self, preserve_fk=True, unicode_=None):
+        if unicode_:
+            self._unicode = unicode_
+        else:
+            self._unicode = lambda self: u'%s as of %s' % (self.history_object,
+                                                          self.history_date)
+
         self._preserve_fk = preserve_fk
 
     def contribute_to_class(self, cls, name):
@@ -50,9 +56,13 @@ class HistoricalRecords(object):
             field = copy.copy(field)
             if isinstance(field, models.ForeignKey) and not self._preserve_fk:
                 # Maybe no need to preserve FK on historical models.
-                field_name = field.get_attname()
+                options = {
+                    'null': field.null,
+                    'blank': field.blank,
+                    'name': field.get_attname(),
+                }
                 field = copy.copy(field.rel.to._meta.pk)
-                field.name = field_name
+                [setattr(field, key, options[key]) for key in options]
 
             if isinstance(field, models.AutoField):
                 # The historical model gets its own AutoField, so any
@@ -83,8 +93,7 @@ class HistoricalRecords(object):
                 ('-', 'Deleted'),
             )),
             'history_object': HistoricalObjectDescriptor(model),
-            '__unicode__': lambda self: u'%s as of %s' % (self.history_object,
-                                                          self.history_date)
+            '__unicode__': self._unicode
         }
 
     def get_meta_options(self, model):
