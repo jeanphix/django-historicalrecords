@@ -5,6 +5,7 @@ from django.db import models
 
 from history import manager
 
+
 class HistoricalRecords(object):
     def __init__(self, preserve_fk=True):
         self._preserve_fk = preserve_fk
@@ -49,7 +50,7 @@ class HistoricalRecords(object):
             field = copy.copy(field)
             if isinstance(field, models.ForeignKey) and not self._preserve_fk:
                 # Maybe no need to preserve FK on historical models.
-                field_name = '%s_id' % field.name
+                field_name = field.get_attname()
                 field = copy.copy(field.rel.to._meta.pk)
                 field.name = field_name
 
@@ -108,6 +109,7 @@ class HistoricalRecords(object):
         for field in instance._meta.fields:
             attrs[field.attname] = getattr(instance, field.attname)
         manager.create(history_type=type, **attrs)
+
 
 class HistoricalObjectDescriptor(object):
     def __init__(self, model):

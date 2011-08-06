@@ -19,7 +19,7 @@ class HistoryManager(models.Manager):
         if self.instance is None:
             return super(HistoryManager, self).get_query_set()
 
-        filter = {self.instance._meta.pk.name: self.instance.pk}
+        filter = {self.instance._meta.pk.attname: self.instance.pk}
         return super(HistoryManager, self).get_query_set().filter(**filter)
 
     def most_recent(self):
