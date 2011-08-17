@@ -6,14 +6,13 @@ from django.db import models
 from history import manager
 
 
-class HistoricalRecords(object):
-    def __init__(self, preserve_fk=True, unicode_=None):
-        if unicode_:
-            self._unicode = unicode_
-        else:
-            self._unicode = lambda self: u'%s as of %s' % (self.history_object,
-                                                          self.history_date)
+unicode_ = lambda self: u'%s as of %s' % (self.history_object,
+    self.history_date)
 
+class HistoricalRecords(object):
+    def __init__(self, preserve_fk=True, db_table_format="%s_history", unicode_=unicode_):
+        self._db_table_format = db_table_format
+        self._unicode = unicode_
         self._preserve_fk = preserve_fk
 
     def contribute_to_class(self, cls, name):
@@ -103,7 +102,8 @@ class HistoricalRecords(object):
         """
         return {
             'ordering': ('-history_id',),
-            'get_latest_by': 'history_id'
+            'get_latest_by': 'history_id',
+            'db_table': self._db_table_format % model._meta.db_table
         }
 
     def post_save(self, instance, created, **kwargs):
